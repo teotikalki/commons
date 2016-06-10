@@ -16,19 +16,11 @@
  */
 package org.exoplatform.commons.notification.impl.service.storage;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
-import javax.jcr.Item;
-import javax.jcr.Node;
-import javax.jcr.NodeIterator;
-import javax.jcr.Session;
+import javax.jcr.*;
 import javax.jcr.query.Query;
 import javax.jcr.query.QueryManager;
 
@@ -245,17 +237,23 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
 
   private NotificationInfo fillModel(Node node) throws Exception {
     if(node == null) return null;
-    NotificationInfo message = NotificationInfo.instance()
-      .setFrom(node.getProperty(NTF_FROM).getString())
-      .setOrder(Integer.valueOf(node.getProperty(NTF_ORDER).getString()))
-      .key(node.getProperty(NTF_PROVIDER_TYPE).getString())
-      .setOwnerParameter(node.getProperty(NTF_OWNER_PARAMETER).getValues())
-      .setSendToDaily(NotificationUtils.valuesToArray(node.getProperty(NTF_SEND_TO_DAILY).getValues()))
-      .setSendToWeekly(NotificationUtils.valuesToArray(node.getProperty(NTF_SEND_TO_WEEKLY).getValues()))
-      .setLastModifiedDate(node.getProperty(EXO_LAST_MODIFIED_DATE).getDate())
-      .setId(node.getName());
-
-    return message;
+    if(!node.hasProperty( EXO_LAST_MODIFIED_DATE)){
+      if(node.canAddMixin("exo:modify")) {
+        node.addMixin("exo:modify");
+      }
+      node.setProperty(EXO_LAST_MODIFIED_DATE, Calendar.getInstance());
+      node.save();
+    }
+      NotificationInfo message = NotificationInfo.instance()
+        .setFrom(node.getProperty(NTF_FROM).getString())
+        .setOrder(Integer.valueOf(node.getProperty(NTF_ORDER).getString()))
+        .key(node.getProperty(NTF_PROVIDER_TYPE).getString())
+        .setOwnerParameter(node.getProperty(NTF_OWNER_PARAMETER).getValues())
+        .setSendToDaily(NotificationUtils.valuesToArray(node.getProperty(NTF_SEND_TO_DAILY).getValues()))
+        .setSendToWeekly(NotificationUtils.valuesToArray(node.getProperty(NTF_SEND_TO_WEEKLY).getValues()))
+        .setLastModifiedDate(node.getProperty(EXO_LAST_MODIFIED_DATE).getDate())
+        .setId(node.getName());
+      return message;
   }
 
   private void putRemoveMap(String key, String value) {

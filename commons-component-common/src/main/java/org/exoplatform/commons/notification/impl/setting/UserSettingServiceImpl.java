@@ -17,12 +17,11 @@
 package org.exoplatform.commons.notification.impl.setting;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
-import javax.jcr.Node;
-import javax.jcr.NodeIterator;
-import javax.jcr.Session;
+import javax.jcr.*;
 import javax.jcr.query.Query;
 import javax.jcr.query.QueryManager;
 
@@ -427,24 +426,31 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
    * @throws Exception
    */
   private UserSetting fillModel(Node node) throws Exception {
-    UserSetting model = UserSetting.getInstance();
-    model.setUserId(node.getParent().getName());
-    model.setDailyPlugins(getValues(node, EXO_DAILY));
-    model.setWeeklyPlugins(getValues(node, EXO_WEEKLY));
-    //
-    model.setChannelActives(getValues(node, EXO_IS_ACTIVE));
-    //
-    List<AbstractChannel> channels = channelManager.getChannels();
-    for (AbstractChannel channel : channels) {
-      model.setChannelPlugins(channel.getId(), getValues(node, getChannelProperty(channel.getId())));
+    if(!node.hasProperty( EXO_LAST_MODIFIED_DATE)){
+      if(node.canAddMixin("exo:modify")) {
+        node.addMixin("exo:modify");
+      }
+      node.setProperty(EXO_LAST_MODIFIED_DATE, Calendar.getInstance());
+      node.save();
     }
-    //
-    model.setLastUpdateTime(node.getParent().getProperty(EXO_LAST_MODIFIED_DATE).getDate());
-    //
-    if (node.hasProperty(EXO_IS_ENABLED)) {
-      model.setEnabled(Boolean.valueOf(node.getProperty(EXO_IS_ENABLED).getString()));
-    }
-    return model;
+      UserSetting model = UserSetting.getInstance();
+      model.setUserId(node.getParent().getName());
+      model.setDailyPlugins(getValues(node, EXO_DAILY));
+      model.setWeeklyPlugins(getValues(node, EXO_WEEKLY));
+      //
+      model.setChannelActives(getValues(node, EXO_IS_ACTIVE));
+      //
+      List<AbstractChannel> channels = channelManager.getChannels();
+      for (AbstractChannel channel : channels) {
+        model.setChannelPlugins(channel.getId(), getValues(node, getChannelProperty(channel.getId())));
+      }
+      //
+      model.setLastUpdateTime(node.getParent().getProperty(EXO_LAST_MODIFIED_DATE).getDate());
+      //
+      if (node.hasProperty(EXO_IS_ENABLED)) {
+        model.setEnabled(Boolean.valueOf(node.getProperty(EXO_IS_ENABLED).getString()));
+      }
+      return model;
   }
   
   private NodeIterator getDefaultDailyIterator(SessionProvider sProvider, int offset, int limit) throws Exception {
@@ -474,9 +480,16 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
         NodeIterator iter = getDefaultDailyIterator(sProvider, offset, limit);
         while (iter.hasNext()) {
           Node node = iter.nextNode();
-          users.add(UserSetting.getInstance()
-                    .setUserId(node.getName())
-                    .setLastUpdateTime(node.getProperty(EXO_LAST_MODIFIED_DATE).getDate()));
+          if(!node.hasProperty( EXO_LAST_MODIFIED_DATE)){
+            if(node.canAddMixin("exo:modify")) {
+              node.addMixin("exo:modify");
+            }
+              node.setProperty(EXO_LAST_MODIFIED_DATE, Calendar.getInstance());
+              node.save();
+          }
+            users.add(UserSetting.getInstance()
+                      .setUserId(node.getName())
+                      .setLastUpdateTime(node.getProperty( EXO_LAST_MODIFIED_DATE).getDate()));
         }
       }
     } catch (Exception e) {
